@@ -25,6 +25,7 @@ class CreateStudentsTable extends Migration
             $table->string('affiliation');
             $table->integer('category_id');
             $table->integer('qualifications_id');
+            $table->string('status');
             $table->timestamps();
         });
     }
