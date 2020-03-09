@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Model\Qualifications;
+use App\Model\Category;
 
 class QualificationController extends Controller
 {
@@ -14,6 +15,16 @@ class QualificationController extends Controller
      */
     public function index()
     {
-        return Qualifications::all();
+        $qualifications = Qualifications::all();
+        $category = Category::all();
+
+        return response()->json([
+            'message' => 'successfully.',
+            'status' =>true,
+            'error'  => 'no',
+            'qualifications' => $qualifications,
+            'category' => $category
+        ], 200);
+
     }
 }

@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Model\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
+use App\Model\Qualifications;
+use App\Model\Category;
 
 class StudentController extends Controller
 {
@@ -35,7 +39,8 @@ class StudentController extends Controller
      */
     public function store(Request $request)
     {
-        try{
+        dd($request);
+        
             $doc = new Student;
                $doc->name = $request->name;
                $doc->nic = $request->nic;
@@ -56,16 +61,17 @@ class StudentController extends Controller
                 'status' =>true,
                 'error'  => 'no',
             ], 200);
-        } catch(\Illuminate\Database\QueryException $e){
-            $errorCode = $e->errorInfo[1];
-            if($errorCode == '1062'){
-                return response()->json([
-                    'message' => 'Duplicate Entry',
-                    'status' => false,
-                    'error'  => 'no',
-                ], 400);
-            }
-        }
+        
+        // catch(\Illuminate\Database\QueryException $e){
+        //     $errorCode = $e->errorInfo[1];
+        //     if($errorCode == '1062'){
+        //         return response()->json([
+        //             'message' => 'Duplicate Entry',
+        //             'status' => false,
+        //             'error'  => 'no',
+        //         ], 400);
+        //     }
+        // }
         
     }
 
@@ -107,20 +113,10 @@ class StudentController extends Controller
      */
     public function update(Request $request, Student $student)
     {
-    
-        return  $doc = Student::find($student);
-          $doc->name = $request->name;
-               $doc->nic = $request->nic;
-               $doc->email = $request->email;
-               $doc->password = $request->password;
-               $doc->status =  $request->status;
-               $doc->profession = $request->profession;
-               $doc->type = $request->type;
-               $doc->affiliation = $request->affiliation;
-               $doc->category_id = $request->category_id;
-               $doc->qualifications_id = $request->qualifications_id;
-          $doc->save();
-          $student_id = $doc->id;
+
+          DB::table('students')
+            ->where('id','=', $student->id)
+            ->update(['name' => $request->name,'nic' => $request->nic,'email' => $request->email,'status' => $request->status,'password' => $request->password,'profession' => $request->profession,'type' => $request->type,'affiliation' => $request->affiliation,'category_id' => $request->category_id,'qualifications_id' => $request->qualifications_id]);
 
                return response()->json([
                 'message' => 'update successfully.',
@@ -138,7 +134,18 @@ class StudentController extends Controller
     public function destroy(Student $student)
     {
         $share = Student::find($student);
-        $share->delete();
+        $share->each->delete();
+
+        $student_list = Student::where('status','REGISTER')
+        ->orderBy('id','ASC')
+        ->get();
+
+        return response()->json([
+            'message' => 'successfully.',
+            'status' =>true,
+            'error'  => 'no',
+            'student_list' => $student_list
+        ], 200);
     }
 
     public function login(Request $request)
@@ -172,22 +179,24 @@ class StudentController extends Controller
 
     public function registerStudent()
     {
-        $student_list = Student::where('status','APPROVED')
-                        ->orderBy('name','ASC')
-                        ->get();
+        $approved_student = DB::table('students')
+                            ->join('categories', 'categories.id', '=', 'students.category_id')
+                            ->join('qualifications', 'qualifications.id', '=', 'students.qualifications_id')
+                            ->where('students.status','=','APPROVED')
+                            ->get(['students.id','students.name','students.type','students.email','students.profession','categories.name  as categories_name', 'qualifications.name  as qualifications_name']);
 
                         return response()->json([
                             'message' => 'successfully.',
                             'status' =>true,
                             'error'  => 'no',
-                            'student_list' => $student_list
+                            'student_list' => $approved_student
                         ], 200);
     }
 
     public function withOutRegister()
     {
         $student_list = Student::where('status','REGISTER')
-        ->orderBy('name','ASC')
+        ->orderBy('id','ASC')
         ->get();
 
         return response()->json([
@@ -204,16 +213,55 @@ class StudentController extends Controller
         $key = $request->key;
         $value = $request->value;
 
-        $student_list = Student::where($key,$value)
-        ->where('status','REGISTER')
-        ->orderBy('name','ASC')
-        ->get();
+        // $student_list = Student::where($key,$value)
+        // ->where('status','APPROVED')
+        // ->orderBy('id','ASC')
+        // ->get();
 
-        return response()->json([
-            'message' => 'successfully.',
-            'status' =>true,
-            'error'  => 'no',
-            'student_list' => $student_list
-        ], 200);
+        $student_list = DB::table('students')
+                            ->join('categories', 'categories.id', '=', 'students.category_id')
+                            ->join('qualifications', 'qualifications.id', '=', 'students.qualifications_id')
+                            ->where('students.status','=','APPROVED')
+                            ->where('students.'.$key,'=',$value)
+                            ->orderBy('students.id','ASC')
+                            ->get(['students.id','students.name','students.type','students.email','students.profession','categories.name  as categories_name', 'qualifications.name  as qualifications_name']);
+
+        if(count($student_list) != 0){
+            return response()->json([
+                'message' => 'successfully.',
+                'status' =>true,
+                'error'  => 'no',
+                'student_list' => $student_list
+            ], 200);
+        } else {
+            return response()->json([
+                'message' => 'empty data.',
+                'status' =>false,
+                'error'  => 'yes',
+            ], 400);
+        }
+
+        
+    }
+
+    public function setApproed(Request $request){
+
+        $stdId = $request->id;
+
+        DB::table('students')
+            ->where('id', $stdId)
+            ->update(['status' => "APPROVED"]);
+
+        $student_list = Student::where('status','REGISTER')
+            ->orderBy('id','ASC')
+            ->get();
+
+            return response()->json([
+                'message' => 'successfully.',
+                'status' =>true,
+                'error'  => 'no',
+                'student_list' => $student_list
+            ], 200);
+
     }
 }
