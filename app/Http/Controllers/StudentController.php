@@ -39,7 +39,6 @@ class StudentController extends Controller
      */
     public function store(Request $request)
     {
-        dd($request);
         
             $doc = new Student;
                $doc->name = $request->name;
